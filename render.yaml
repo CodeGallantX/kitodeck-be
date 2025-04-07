@@ -5,7 +5,7 @@ services:
     buildCommand: |
       pip install requirements.txt
       python manage.py collectstatic --noinput
-    startCommand: gunicorn  kitodeck.wsgi:application
+    startCommand: gunicorn kitodeck.wsgi:application
     envVars:
       - key: DATABASE_URL
           fromDatabase: 
@@ -15,6 +15,10 @@ services:
         value: django-insecure-!lbz2veaxjmx#8rihn6q%_i(&m_m78_#b=vv4f7*i%evaz#4el
       - key: DEBUG
         value: 'False'
+      - key: EMAIL_HOST_USER
+        value: sayojami2007@gmail.com
+      - key: EMAIL_HOST_PASSWORD
+        value: cxnblppdktzlvpmv
     autoDeploy: true
 
 

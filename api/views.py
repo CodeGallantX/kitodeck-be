@@ -1,6 +1,8 @@
 from django.contrib.auth.models import User
 from django.contrib.auth import authenticate
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -13,6 +15,35 @@ from drf_spectacular.utils import (
     OpenApiResponse,
     OpenApiTypes
 )
+
+def send_welcome_email(user):
+    """
+    Send a beautifully styled HTML welcome email to new users
+    """
+    subject = 'Welcome to Our Platform!'
+    
+    # Context for the email template
+    context = {
+        'username': user.username,
+        'email': user.email,
+        'support_email': 'support@yourdomain.com',
+        'platform_name': 'Your Awesome Platform',
+        'login_url': 'https://yourapp.com/login'
+    }
+    
+    # Render HTML content
+    html_content = render_to_string('emails/welcome.html', context)
+    text_content = strip_tags(html_content)  # Fallback text version
+    
+    email = EmailMultiAlternatives(
+        subject=subject,
+        body=text_content,
+        from_email='Welcome Team <no-reply@yourdomain.com>',
+        to=[user.email],
+        reply_to=['support@yourdomain.com']
+    )
+    email.attach_alternative(html_content, "text/html")
+    email.send()
 
 @extend_schema(
     request={
@@ -73,13 +104,20 @@ from drf_spectacular.utils import (
             response={
                 'type': 'object',
                 'properties': {
-                    'error': {'type': 'string'}
+                    'error': {'type': 'string'},
+                    'details': {'type': 'object'}
                 }
             },
             examples=[
                 OpenApiExample(
                     'Error Response',
-                    value={"error": "Email already registered"}
+                    value={
+                        "error": "Validation failed",
+                        "details": {
+                            "email": ["This email is already registered"],
+                            "password": ["This password is too common"]
+                        }
+                    }
                 )
             ]
         )
@@ -102,39 +140,58 @@ def sign_up(request):
     data = request.data
     email = data.get('email')
     password = data.get('password')
-    username = data.get('username', email)  # Default to email if username not provided
+    username = data.get('username', email.split('@')[0])  # Default to email prefix if username not provided
 
-    if not email or not password:
-        return Response({'error': 'Email and password are required'}, 
-                      status=status.HTTP_400_BAD_REQUEST)
+    # Validation
+    errors = {}
+    if not email:
+        errors['email'] = ['Email is required']
+    if not password:
+        errors['password'] = ['Password is required']
+    elif len(password) < 8:
+        errors['password'] = ['Password must be at least 8 characters']
+    
+    if errors:
+        return Response({
+            'error': 'Validation failed',
+            'details': errors
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     if User.objects.filter(email=email).exists():
-        return Response({'error': 'Email already registered'}, 
-                      status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            'error': 'Email already registered',
+            'details': {'email': ['This email is already in use']}
+        }, status=status.HTTP_400_BAD_REQUEST)
 
-    user = User.objects.create_user(username=username, email=email, password=password)
-    refresh = RefreshToken.for_user(user)
+    try:
+        user = User.objects.create_user(
+            username=username,
+            email=email,
+            password=password
+        )
+        refresh = RefreshToken.for_user(user)
+        
+        # Send welcome email (async in production with Celery)
+        send_welcome_email(user)
 
-    send_mail(
-        'Welcome!',
-        f'Hello {email},\n\nThank you for signing up.',
-        'no-reply@yourdomain.com',
-        [email],
-        fail_silently=False,
-    )
+        return Response({
+            'message': 'Sign up successful!',
+            'tokens': {
+                'access': str(refresh.access_token),
+                'refresh': str(refresh)
+            },
+            'user': {
+                'id': user.id,
+                'email': user.email,
+                'username': user.username
+            }
+        }, status=status.HTTP_201_CREATED)
 
-    return Response({
-        'message': 'Sign up successful!',
-        'tokens': {
-            'access': str(refresh.access_token),
-            'refresh': str(refresh)
-        },
-        'user': {
-            'id': user.id,
-            'email': user.email,
-            'username': user.username
-        }
-    }, status=status.HTTP_201_CREATED)
+    except Exception as e:
+        return Response({
+            'error': 'Account creation failed',
+            'details': str(e)
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @extend_schema(
     request={
@@ -200,13 +257,14 @@ def sign_up(request):
             response={
                 'type': 'object',
                 'properties': {
-                    'error': {'type': 'string'}
+                    'error': {'type': 'string'},
+                    'details': {'type': 'string'}
                 }
             },
             examples=[
                 OpenApiExample(
                     'Error Response',
-                    value={"error": "Invalid credentials"}
+                    value={"error": "Invalid credentials", "details": "No account found with this email"}
                 )
             ]
         )
@@ -230,32 +288,37 @@ def login_view(request):
     password = data.get('password')
 
     if not email or not password:
-        return Response({'error': 'Email and password are required'}, 
-                      status=status.HTTP_400_BAD_REQUEST)
+        return Response({
+            'error': 'Email and password are required',
+            'details': 'Both fields must be provided'
+        }, status=status.HTTP_400_BAD_REQUEST)
 
     try:
         user = User.objects.get(email=email)
         user = authenticate(username=user.username, password=password)
+        
+        if user is None:
+            return Response({
+                'error': 'Invalid credentials',
+                'details': 'Incorrect password'
+            }, status=status.HTTP_401_UNAUTHORIZED)
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            'access': str(refresh.access_token),
+            'refresh': str(refresh),
+            'user': {
+                'email': user.email,
+                'username': user.username,
+                'id': user.id
+            }
+        }, status=status.HTTP_200_OK)
+
     except User.DoesNotExist:
-        user = None
-
-    if user is None:
-        error_msg = 'Invalid credentials'
-        if not User.objects.filter(email=email).exists():
-            error_msg = 'No account found with this email'
-        return Response({'error': error_msg}, 
-                      status=status.HTTP_401_UNAUTHORIZED)
-
-    refresh = RefreshToken.for_user(user)
-    return Response({
-        'access': str(refresh.access_token),
-        'refresh': str(refresh),
-        'user': {
-            'email': user.email,
-            'username': user.username,
-            'id': user.id
-        }
-    }, status=status.HTTP_200_OK)
+        return Response({
+            'error': 'Invalid credentials',
+            'details': 'No account found with this email'
+        }, status=status.HTTP_401_UNAUTHORIZED)
 
 @extend_schema(
     description='Get current user details',
@@ -268,7 +331,8 @@ def login_view(request):
                     'email': {'type': 'string'},
                     'username': {'type': 'string'},
                     'id': {'type': 'integer'},
-                    'is_staff': {'type': 'boolean'}
+                    'is_staff': {'type': 'boolean'},
+                    'date_joined': {'type': 'string', 'format': 'date-time'}
                 }
             }
         ),
@@ -291,7 +355,8 @@ def get_user_details(request):
         'email': user.email,
         'username': user.username,
         'id': user.id,
-        'is_staff': user.is_staff
+        'is_staff': user.is_staff,
+        'date_joined': user.date_joined
     }, status=status.HTTP_200_OK)
 
 @extend_schema(
@@ -323,7 +388,7 @@ def get_user_details(request):
 @permission_classes([IsAuthenticated])
 def process_data(request):
     return Response({
-        'message': 'Data processed',
+        'message': 'Data processed successfully',
         'user': request.user.username,
         'received_data': request.data
     }, status=status.HTTP_200_OK)
