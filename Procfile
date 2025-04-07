@@ -1,1 +1,1 @@
-web: gunicorn kitodeck.wsgi
+web: gunicorn kitodeck.wsgi:application

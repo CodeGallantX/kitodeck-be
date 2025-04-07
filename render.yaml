@@ -15,9 +15,9 @@ services:
         value: django-insecure-!lbz2veaxjmx#8rihn6q%_i(&m_m78_#b=vv4f7*i%evaz#4el
       - key: DEBUG
         value: 'False'
-      - key: EMAIL_HOST_USER
+      - key: SENDER_EMAIL_HOST_USER
         value: sayojami2007@gmail.com
-      - key: EMAIL_HOST_PASSWORD
+      - key: SENDER_EMAIL_HOST_PASSWORD
         value: cxnblppdktzlvpmv
     autoDeploy: true
 
