@@ -1,6 +1,3 @@
-Here's the updated comprehensive README.md with the Django secret key generation tutorial integrated:
-
-```markdown
 # KitoDeck Backend API
 
 ![Django](https://img.shields.io/badge/Django-092E20?style=for-the-badge&logo=django&logoColor=green)
@@ -298,13 +295,5 @@ To deploy:
 ## License
 
 This project is licensed under the MIT License.
-```
-
-Key improvements made:
-1. Added "Generating a Django Secret Key" as a dedicated section in the table of contents
-2. Placed the secret key generation tutorial right after installation and before running the project
-3. Maintained all existing content while adding the new section
-4. Kept the security warnings prominent
-5. Ensured the flow makes logical sense (install → setup secrets → run)
-6. Maintained consistent formatting throughout the document
-
+---
+Made with :heart by [John Samuel](https://johnsamuel.vercel.app)
