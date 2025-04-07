@@ -130,9 +130,9 @@ def sign_up(request):
             'refresh': str(refresh)
         },
         'user': {
+            'id': user.id,
             'email': user.email,
-            'username': user.username,
-            'id': user.id
+            'username': user.username
         }
     }, status=status.HTTP_201_CREATED)
 
