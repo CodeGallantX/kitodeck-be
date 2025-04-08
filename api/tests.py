@@ -113,7 +113,6 @@ class AuthenticationTests(TestCase):
         response = self.client.get(self.user_details_url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-
 class APIFunctionalityTests(TestCase):
     def setUp(self):
         self.client = APIClient()
@@ -165,3 +164,66 @@ class APIFunctionalityTests(TestCase):
         self.assertEqual(response.data['message'], 'Data processed successfully')
         self.assertEqual(response.data['received_data']['data_point_1'], 'value_1')
         self.assertEqual(response.data['received_data']['data_point_2'], 'value_2')
+
+class KitoProtectionTests(TestCase):
+    def setUp(self):
+        self.client = APIClient()
+        
+        # Create a test user
+        self.test_user = User.objects.create_user(
+            username='testuser',
+            email='test@example.com',
+            password='testpassword123'
+        )
+        
+        # Get tokens for authentication
+        login_data = {
+            'email': 'test@example.com',
+            'password': 'testpassword123'
+        }
+        login_response = self.client.post(reverse('login'), login_data, format='json')
+        self.access_token = login_response.data['access']
+        
+        # Set up URLs for API endpoints
+        self.analyze_message_url = reverse('analyze_message')
+        self.check_conversation_url = reverse('check_conversation_safety')
+        self.scan_image_safety_url = reverse('scan_image_for_safety')
+    
+    def test_analyze_message(self):
+        """Test the message analysis endpoint"""
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+        
+        data = {
+            'text': 'This is a message containing the word kito which is prohibited'
+        }
+        response = self.client.post(self.analyze_message_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue('risk_score' in response.data)
+        self.assertTrue('risk_level' in response.data)
+        self.assertTrue('prohibited_words' in response.data)
+    
+    def test_check_conversation_safety(self):
+        """Test the conversation safety check endpoint"""
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+        
+        data = {
+            'user_id': self.test_user.id,
+            'messages': [
+                {'content': 'Hello', 'timestamp': '2023-01-01T12:00:00'},
+                {'content': 'Let\'s meet at this location', 'timestamp': '2023-01-01T12:00:05'},
+                {'content': 'Bring money', 'timestamp': '2023-01-01T12:00:10'}
+            ]
+        }
+        response = self.client.post(self.check_conversation_url, data, format='json')
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue('risk_score' in response.data)
+        self.assertTrue('urgent_meetup_request' in response.data)
+    
+    def test_scan_image_for_safety(self):
+        """Test the image scanning for safety endpoint"""
+        self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {self.access_token}")
+        
+        # In a real test, you would upload an actual image file
+        # This is just a placeholder for the test
+        response = self.client.post(self.scan_image_safety_url, format='multipart')
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
