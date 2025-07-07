@@ -6,10 +6,46 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema, OpenApiExample
 from .serializers import SignUpSerializer, LoginSerializer
 from .models import BlacklistedToken
+from django.core.mail import send_mail
 import re
+
 
 @extend_schema(tags=['Auth'])
 class SignUpView(APIView):
+    @extend_schema(
+        request=SignUpSerializer,
+        responses={201: dict, 400: dict},
+        examples=[
+            OpenApiExample(
+                'Example',
+                value={"username": "john_doe", "email": "john@example.com", "password": "Pass1234"},
+            )
+        ]
+    )
+    def post(self, request):
+        serializer = SignUpSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            
+            # ✅ Send welcome email
+            send_mail(
+                subject="🎉 Welcome to KitoDeck AI",
+                message=(
+                    f"Hi {user.username},\n\n"
+                    "Welcome to KitoDeck AI — your smart assistant in avoiding kito predators.\n"
+                    "You're officially part of a safer, smarter digital movement.\n\n"
+                    "Explore your dashboard, scan images, and analyze chats like a pro.\n\n"
+                    "Cheers,\n"
+                    "The KitoDeck Team"
+                ),
+                from_email=None,  # Uses DEFAULT_FROM_EMAIL
+                recipient_list=[user.email],
+                fail_silently=False
+            )
+
+            return Response({'message': 'User created successfully'}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     @extend_schema(
         request=SignUpSerializer,
         responses={201: dict, 400: dict},
