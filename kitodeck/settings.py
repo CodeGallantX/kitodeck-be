@@ -158,6 +158,8 @@ REST_FRAMEWORK = {
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
+
+
 SPECTACULAR_SETTINGS = {
     'TITLE': 'KitoDeck API Documentation',
     'DESCRIPTION': 'API documentation for backend services of KitoDeck AI',
@@ -236,8 +238,8 @@ SIMPLE_JWT = {
 
 # SMTP CONFIGURATION
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_HOST = config('EMAIL_HOST')
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('SENDER_EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = config('SENDER_EMAIL_HOST_PASSWORD') 
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD') 
