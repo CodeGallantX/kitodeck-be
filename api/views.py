@@ -10,6 +10,9 @@ from django.core.mail import send_mail
 import re
 
 
+# ------------------------------
+# ✅ USER REGISTRATION VIEW
+# ------------------------------
 @extend_schema(tags=['Auth'])
 class SignUpView(APIView):
     @extend_schema(
@@ -17,8 +20,12 @@ class SignUpView(APIView):
         responses={201: dict, 400: dict},
         examples=[
             OpenApiExample(
-                'Example',
-                value={"username": "john_doe", "email": "john@example.com", "password": "Pass1234"},
+                'Signup Example',
+                value={
+                    "username": "john_doe",
+                    "email": "john@example.com",
+                    "password": "Pass1234"
+                }
             )
         ]
     )
@@ -26,7 +33,7 @@ class SignUpView(APIView):
         serializer = SignUpSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            
+
             # ✅ Send welcome email
             send_mail(
                 subject="🎉 Welcome to KitoDeck AI",
@@ -38,31 +45,19 @@ class SignUpView(APIView):
                     "Cheers,\n"
                     "The KitoDeck Team"
                 ),
-                from_email=None,  # Uses DEFAULT_FROM_EMAIL
+                from_email=None,
                 recipient_list=[user.email],
                 fail_silently=False
             )
 
             return Response({'message': 'User created successfully'}, status=status.HTTP_201_CREATED)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    @extend_schema(
-        request=SignUpSerializer,
-        responses={201: dict, 400: dict},
-        examples=[
-            OpenApiExample(
-                'Example',
-                value={"username": "john_doe", "email": "john@example.com", "password": "Pass1234"},
-            )
-        ]
-    )
-    def post(self, request):
-        serializer = SignUpSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({'message': 'User created successfully'}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+# ------------------------------
+# ✅ USER LOGIN VIEW (EMAIL + PASSWORD)
+# ------------------------------
 @extend_schema(tags=['Auth'])
 class LoginView(APIView):
     @extend_schema(
@@ -71,26 +66,35 @@ class LoginView(APIView):
         examples=[
             OpenApiExample(
                 'Login Example',
-                value={"username": "john_doe", "password": "Pass1234"},
+                value={
+                    "email": "john@example.com",
+                    "password": "Pass1234"
+                }
             )
         ]
     )
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
-            user = authenticate(
-                email=serializer.validated_data['username'],
-                password=serializer.validated_data['password']
-            )
+            email = serializer.validated_data['email']
+            password = serializer.validated_data['password']
+
+            user = authenticate(request=request, email=email, password=password)
             if user:
                 refresh = RefreshToken.for_user(user)
                 return Response({
                     'access': str(refresh.access_token),
                     'refresh': str(refresh)
                 })
-            return Response({'error': 'Invalid credentials'}, status=status.HTTP_401_UNAUTHORIZED)
+
+            return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+# ------------------------------
+# ✅ USER LOGOUT VIEW
+# ------------------------------
 @extend_schema(tags=['Auth'])
 class LogoutView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -106,12 +110,18 @@ class LogoutView(APIView):
         try:
             token = request.data.get('refresh')
             if not token:
-                return Response({'error': 'Refresh token required'}, status=400)
+                return Response({'error': 'Refresh token required'}, status=status.HTTP_400_BAD_REQUEST)
+
             BlacklistedToken.objects.create(token=token)
             return Response({'message': 'Logged out successfully'})
-        except Exception:
-            return Response({'error': 'Something went wrong'}, status=500)
 
+        except Exception as e:
+            return Response({'error': str(e) or 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# ------------------------------
+# ✅ IMAGE SCAN VIEW (Static Response)
+# ------------------------------
 @extend_schema(tags=['AI'])
 class ImageScanView(APIView):
     @extend_schema(request=None, responses={200: dict})
@@ -121,6 +131,10 @@ class ImageScanView(APIView):
             'message': 'Image analyzed. No kito indicators found.'
         })
 
+
+# ------------------------------
+# ✅ CHAT SCAN VIEW (Keyword Matching)
+# ------------------------------
 @extend_schema(tags=['AI'])
 class ChatScanView(APIView):
     @extend_schema(
@@ -128,7 +142,7 @@ class ChatScanView(APIView):
         responses={200: dict},
         examples=[
             OpenApiExample(
-                'Chat Example',
+                'Chat Scan Example',
                 value={"transcript": "Hey baby, send me money now."}
             )
         ]
@@ -136,6 +150,7 @@ class ChatScanView(APIView):
     def post(self, request):
         transcript = request.data.get('transcript', '')
         kito_keywords = ['send me money', 'urgent transfer', 'sugar daddy', 'private snap']
+
         detected = [kw for kw in kito_keywords if re.search(kw, transcript, re.IGNORECASE)]
 
         return Response({
