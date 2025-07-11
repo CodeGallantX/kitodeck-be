@@ -1,7 +1,8 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import status, permissions
-from django.contrib.auth import authenticate
+from django.contrib.auth import get_user_model
+from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema, OpenApiExample
 from .serializers import SignUpSerializer, LoginSerializer
@@ -9,6 +10,7 @@ from .models import BlacklistedToken
 from django.core.mail import send_mail
 import re
 
+User = get_user_model()
 
 # ------------------------------
 # ✅ USER REGISTRATION VIEW
@@ -34,7 +36,6 @@ class SignUpView(APIView):
         if serializer.is_valid():
             user = serializer.save()
 
-            # ✅ Send welcome email
             send_mail(
                 subject="🎉 Welcome to KitoDeck AI",
                 message=(
@@ -56,7 +57,7 @@ class SignUpView(APIView):
 
 
 # ------------------------------
-# ✅ USER LOGIN VIEW (EMAIL + PASSWORD)
+# ✅ USER LOGIN VIEW (EMAIL + PASSWORD ONLY)
 # ------------------------------
 @extend_schema(tags=['Auth'])
 class LoginView(APIView):
@@ -79,15 +80,19 @@ class LoginView(APIView):
             email = serializer.validated_data['email']
             password = serializer.validated_data['password']
 
-            user = authenticate(request=request, email=email, password=password)
-            if user:
-                refresh = RefreshToken.for_user(user)
-                return Response({
-                    'access': str(refresh.access_token),
-                    'refresh': str(refresh)
-                })
+            try:
+                user = User.objects.get(email=email)
+            except User.DoesNotExist:
+                return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
-            return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+            if not user.check_password(password):
+                return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'access': str(refresh.access_token),
+                'refresh': str(refresh)
+            })
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -107,20 +112,19 @@ class LogoutView(APIView):
         ]
     )
     def post(self, request):
-        try:
-            token = request.data.get('refresh')
-            if not token:
-                return Response({'error': 'Refresh token required'}, status=status.HTTP_400_BAD_REQUEST)
+        token = request.data.get('refresh')
+        if not token:
+            return Response({'error': 'Refresh token required'}, status=status.HTTP_400_BAD_REQUEST)
 
+        try:
             BlacklistedToken.objects.create(token=token)
             return Response({'message': 'Logged out successfully'})
-
         except Exception as e:
             return Response({'error': str(e) or 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ------------------------------
-# ✅ IMAGE SCAN VIEW (Static Response)
+# ✅ IMAGE SCAN VIEW
 # ------------------------------
 @extend_schema(tags=['AI'])
 class ImageScanView(APIView):
@@ -133,7 +137,7 @@ class ImageScanView(APIView):
 
 
 # ------------------------------
-# ✅ CHAT SCAN VIEW (Keyword Matching)
+# ✅ CHAT SCAN VIEW
 # ------------------------------
 @extend_schema(tags=['AI'])
 class ChatScanView(APIView):
