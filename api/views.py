@@ -61,19 +61,6 @@ class SignUpView(APIView):
 # ------------------------------
 @extend_schema(tags=['Auth'])
 class LoginView(APIView):
-    @extend_schema(
-        request=LoginSerializer,
-        responses={200: dict, 401: dict},
-        examples=[
-            OpenApiExample(
-                'Login Example',
-                value={
-                    "email": "john@example.com",
-                    "password": "Pass1234"
-                }
-            )
-        ]
-    )
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
@@ -82,19 +69,20 @@ class LoginView(APIView):
 
             try:
                 user = User.objects.get(email=email)
+                if user.check_password(password):
+                    refresh = RefreshToken.for_user(user)
+                    return Response({
+                        'access': str(refresh.access_token),
+                        'refresh': str(refresh),
+                    })
+                else:
+                    return Response({'detail': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+
             except User.DoesNotExist:
-                return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
-
-            if not user.check_password(password):
-                return Response({'error': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
-
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'access': str(refresh.access_token),
-                'refresh': str(refresh)
-            })
+                return Response({'detail': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 
 # ------------------------------
