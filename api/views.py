@@ -3,15 +3,17 @@ from rest_framework.response import Response
 from rest_framework import status, permissions
 from rest_framework.permissions import AllowAny
 from django.contrib.auth import get_user_model
-from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema, OpenApiExample
-from .serializers import SignUpSerializer, LoginSerializer
+from .serializers import SignUpSerializer, LoginSerializer, UserProfileSerializer
 from .models import BlacklistedToken
 from django.core.mail import send_mail
 import re
+import logging
 
+logger = logging.getLogger(__name__)
 User = get_user_model()
+
 
 # ------------------------------
 # USER REGISTRATION 
@@ -19,6 +21,7 @@ User = get_user_model()
 @extend_schema(tags=['Auth'])
 class SignUpView(APIView):
     permission_classes = [AllowAny]
+
     @extend_schema(
         request=SignUpSerializer,
         responses={201: dict, 400: dict},
@@ -64,6 +67,7 @@ class SignUpView(APIView):
 @extend_schema(tags=['Auth'])
 class LoginView(APIView):
     permission_classes = [AllowAny]
+
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
@@ -78,8 +82,7 @@ class LoginView(APIView):
                         'access': str(refresh.access_token),
                         'refresh': str(refresh),
                     })
-                else:
-                    return Response({'detail': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
+                return Response({'detail': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
 
             except User.DoesNotExist:
                 return Response({'detail': 'Invalid email or password'}, status=status.HTTP_401_UNAUTHORIZED)
@@ -87,9 +90,8 @@ class LoginView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-
 # ------------------------------
-#  USER LOGOUT 
+# USER LOGOUT 
 # ------------------------------
 @extend_schema(tags=['Auth'])
 class LogoutView(APIView):
@@ -98,9 +100,7 @@ class LogoutView(APIView):
     @extend_schema(
         request=dict,
         responses={200: dict, 400: dict},
-        examples=[
-            OpenApiExample('Logout Example', value={"refresh": "<refresh_token>"})
-        ]
+        examples=[OpenApiExample('Logout Example', value={"refresh": "<refresh_token>"})]
     )
     def post(self, request):
         token = request.data.get('refresh')
@@ -111,9 +111,8 @@ class LogoutView(APIView):
             BlacklistedToken.objects.create(token=token)
             return Response({'message': 'Logged out successfully'})
         except Exception as e:
-            return Response({'error': str(e) or 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
+            logger.exception("Error during logout")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ------------------------------
@@ -124,10 +123,13 @@ class UserProfileView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request):
-        user = request.user
-        serializer = UserProfileSerializer(user)
-        return Response(serializer.data, status=status.HTTP_200_OK)
-
+        try:
+            user = request.user
+            serializer = UserProfileSerializer(user)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        except Exception as e:
+            logger.exception("Error fetching user profile")
+            return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 # ------------------------------
@@ -136,6 +138,7 @@ class UserProfileView(APIView):
 @extend_schema(tags=['AI'])
 class ImageScanView(APIView):
     permission_classes = [AllowAny]
+
     @extend_schema(request=None, responses={200: dict})
     def post(self, request):
         return Response({
@@ -150,6 +153,7 @@ class ImageScanView(APIView):
 @extend_schema(tags=['AI'])
 class ChatScanView(APIView):
     permission_classes = [AllowAny]
+
     @extend_schema(
         request=dict,
         responses={200: dict},
