@@ -116,7 +116,7 @@ class LogoutView(APIView):
 
 
 # ------------------------------
-# GET LOGGED-IN USER PROFILE
+# GET USER PROFILE
 # ------------------------------
 @extend_schema(tags=["User"])
 class UserProfileView(APIView):
