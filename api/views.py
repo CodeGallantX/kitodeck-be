@@ -13,7 +13,7 @@ import re
 User = get_user_model()
 
 # ------------------------------
-# ✅ USER REGISTRATION VIEW
+# USER REGISTRATION 
 # ------------------------------
 @extend_schema(tags=['Auth'])
 class SignUpView(APIView):
@@ -57,7 +57,7 @@ class SignUpView(APIView):
 
 
 # ------------------------------
-# ✅ USER LOGIN VIEW (EMAIL + PASSWORD ONLY)
+# USER LOGIN 
 # ------------------------------
 @extend_schema(tags=['Auth'])
 class LoginView(APIView):
@@ -86,7 +86,7 @@ class LoginView(APIView):
 
 
 # ------------------------------
-# ✅ USER LOGOUT VIEW
+#  USER LOGOUT 
 # ------------------------------
 @extend_schema(tags=['Auth'])
 class LogoutView(APIView):
@@ -111,8 +111,24 @@ class LogoutView(APIView):
             return Response({'error': str(e) or 'Something went wrong'}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+
+
 # ------------------------------
-# ✅ IMAGE SCAN VIEW
+# GET LOGGED-IN USER PROFILE
+# ------------------------------
+@extend_schema(tags=["User"])
+class UserProfileView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        serializer = UserProfileSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+
+
+# ------------------------------
+# IMAGE SCAN 
 # ------------------------------
 @extend_schema(tags=['AI'])
 class ImageScanView(APIView):
@@ -125,7 +141,7 @@ class ImageScanView(APIView):
 
 
 # ------------------------------
-# ✅ CHAT SCAN VIEW
+# CHAT SCAN 
 # ------------------------------
 @extend_schema(tags=['AI'])
 class ChatScanView(APIView):
