@@ -1,6 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status, permissions
+from rest_framework import status
+from rest_framework.permissions import AllowAny
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import check_password
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -17,6 +18,7 @@ User = get_user_model()
 # ------------------------------
 @extend_schema(tags=['Auth'])
 class SignUpView(APIView):
+    permission_classes = [AllowAny]
     @extend_schema(
         request=SignUpSerializer,
         responses={201: dict, 400: dict},
@@ -61,6 +63,7 @@ class SignUpView(APIView):
 # ------------------------------
 @extend_schema(tags=['Auth'])
 class LoginView(APIView):
+    permission_classes = [AllowAny]
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
         if serializer.is_valid():
@@ -132,6 +135,7 @@ class UserProfileView(APIView):
 # ------------------------------
 @extend_schema(tags=['AI'])
 class ImageScanView(APIView):
+    permission_classes = [AllowAny]
     @extend_schema(request=None, responses={200: dict})
     def post(self, request):
         return Response({
@@ -145,6 +149,7 @@ class ImageScanView(APIView):
 # ------------------------------
 @extend_schema(tags=['AI'])
 class ChatScanView(APIView):
+    permission_classes = [AllowAny]
     @extend_schema(
         request=dict,
         responses={200: dict},
