@@ -7,7 +7,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from drf_spectacular.utils import extend_schema, OpenApiExample
 from .serializers import SignUpSerializer, LoginSerializer, UserProfileSerializer
 from .models import BlacklistedToken
-from django.core.mail import send_mail
+from .utils.email import send_welcome_email
 import re
 import logging
 
@@ -40,23 +40,8 @@ class SignUpView(APIView):
         serializer = SignUpSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-
-            send_mail(
-                subject="🎉 Welcome to KitoDeck AI",
-                message=(
-                    f"Hi {user.username},\n\n"
-                    "Welcome to KitoDeck AI — your smart assistant in avoiding kito predators.\n"
-                    "You're officially part of a safer, smarter digital movement.\n\n"
-                    "Explore your dashboard, scan images, and analyze chats like a pro.\n\n"
-                    "Cheers,\n"
-                    "The KitoDeck Team"
-                ),
-                from_email=None,
-                recipient_list=[user.email],
-                fail_silently=False
-            )
-
-            return Response({'message': 'User created successfully'}, status=status.HTTP_201_CREATED)
+            send_welcome_email(user)
+            return Response({'message': 'User created successfully!'}, status=status.HTTP_201_CREATED)
 
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

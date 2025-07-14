@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&display=swap" rel="stylesheet">
+  <title>Welcome to KitoDeck AI</title>
+  <style>
+    body {
+      font-family: 'DM Sans';
+      background-color: #f8fafc;
+      color: #111827;
+      padding: 2rem;
+    }
+    .email-wrapper {
+      max-width: 600px;
+      margin: 0 auto;
+      background: #ffffff;
+      border-radius: 8px;
+      padding: 2rem;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.07);
+    }
+    .brand {
+      font-size: 1.5rem;
+      font-weight: bold;
+      color: #0f766e;
+      margin-bottom: 1rem;
+    }
+    .cta {
+      display: inline-block;
+      padding: 0.75rem 1.5rem;
+      background-color: #0f766e;
+      color: #ffffff;
+      text-decoration: none;
+      border-radius: 5px;
+      margin-top: 1rem;
+    }
+    .footer {
+      font-size: 0.85rem;
+      color: #6b7280;
+      margin-top: 2rem;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+  <div class="email-wrapper">
+    <h1 class="brand">Welcome to KitoDeck 🎉</h1>
+    <p>Hello {{ user_name|default:"there" }},</p>
+    <p>We're thrilled to have you on board! KitoDeck empowers you with advanced AI tools to scan, analyze, and monitor content safety — all from a single, intuitive dashboard.</p>
+    <p>Here’s what you can do next:</p>
+    <ul>
+      <li>🔍 Scan images for unsafe or inappropriate content</li>
+      <li>💬 Analyze chat messages for toxicity and hate speech</li>
+    </ul>
+    <p>Click below to get started:</p>
+    <a class="cta" href="{{ dashboard_url | default: '#'}}">Go to Dashboard</a>
+
+    <p style="margin-top: 2rem;">If you have any questions, feel free to reply to this email — we’re here to help!</p>
+
+    <div class="footer">
+      KitoDeck | Identity Safety<br />
+      © {{ current_year|default:"2025" }} KitoDeck Ai
+    </div>
+  </div>
+</body>
+</html>
