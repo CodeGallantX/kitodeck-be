@@ -78,9 +78,9 @@ graph TD
     A[Client] --> B[Render Web Service]
     B --> C[API Server]
     C --> D[(PostgreSQL)]
-    C --> E[(Redis)]
-    D --> F[Backup Service]
-    E --> G[Monitoring]
+    D --> E[Backup Service]
+    C --> F[Brevo SMTP - Email Service]
+    C --> G[Swagger & ReDoc API Docs]
 ```
 
 ## Getting Started
