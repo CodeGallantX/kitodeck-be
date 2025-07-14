@@ -1,7 +1,7 @@
 # KitoDeck Backend API
 
-![Build Status](https://img.shields.io/github/actions/workflow/status/yourorg/kitodeck-be/ci.yml?style=for-the-badge)
-![License](https://img.shields.io/github/license/yourorg/kitodeck-be?style=for-the-badge)
+![Build Status](https://img.shields.io/github/actions/workflow/status/codegallantx/kitodeck-be/ci.yml?style=for-the-badge)
+![License](https://img.shields.io/github/license/codegallantx/kitodeck-be?style=for-the-badge)
 ![Python Version](https://img.shields.io/badge/Python-3.12+-blue?style=for-the-badge)
 ![Django Version](https://img.shields.io/badge/Django-5.1-green?style=for-the-badge)
 
@@ -276,14 +276,6 @@ Initially, when a user's access token expired and multiple parallel requests wer
 
 Emails for password reset and verification were failing silently. After investigating SMTP settings and reviewing logs, I realized SSL on port 465 was misconfigured. Switching to TLS on port 587 and adding proper logging revealed underlying connection timeouts. I added a retry mechanism with exponential backoff and improved email error visibility.
 
-#### ⚠️ Image Scan Endpoint Slowness
-
-The image scanning endpoint was extremely slow due to compute-heavy analysis being done inline. Profiling revealed that some base64-encoded payloads were very large. I moved the scan operation to an asynchronous Celery task queue, used Redis for job tracking, and cached previously processed hashes for repeat uploads.
-
-#### ⚠️ Short Password Reset Token TTL
-
-The password reset tokens were expiring too quickly for users to act on them (especially on slow networks). Realistic testing showed that 10-minute expiry was too short. I extended the TTL to 30 minutes, and added a frontend countdown timer to make expiration obvious to users.
-
 #### ⚠️ Broken Redirect After Login
 
 The login flow initially returned a successful 200 status along with a valid JWT token pair (access and refresh). However, users were immediately redirected back to `/auth/login`, effectively making it seem as though the authentication failed — even though it hadn't. After deep-diving into the browser devtools and debugging both the authentication and routing logic, I identified the following critical issues:
@@ -314,13 +306,6 @@ We welcome contributions! Please:
 1. Fork the repository
 2. Create a feature branch
 3. Submit a pull request
-
-### Guidelines
-
-* Maintain 100% test coverage
-* Follow PEP 8 standards
-* Document new features
-* Update CHANGELOG.md
 
 ## License
 
