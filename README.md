@@ -41,6 +41,11 @@ KitoDeck Backend is a secure, high-performance API service built with Django RES
 
 The system processes over 10,000 requests per minute in production while maintaining sub-200ms response times for critical endpoints.
 
+### 📹 Project Walkthrough
+> Click the image to watch the demo
+[![Watch the demo](https://img.youtube.com/vi/_ASpffdo1SY/hqdefault.jpg)](https://youtu.be/_ASpffdo1SY)
+
+
 ## Key Features
 
 ### Authentication & Security
@@ -286,6 +291,7 @@ The login flow initially returned a successful 200 status along with a valid JWT
 
 2. **Frontend Session Check Misalignment**: The dashboard fetch logic depended on immediate availability of a valid access token. There was no mechanism in place to wait for token readiness or to retry authentication gracefully if the initial check failed.
 
+
 #### 🛠️ Fixes Implemented
 
 * **Token Handling Synchronization**:
@@ -298,7 +304,29 @@ The login flow initially returned a successful 200 status along with a valid JWT
 * **Graceful Fallbacks**:
   * Integrated a redirect fallback to `/dashboard` if a previous route was unavailable, avoiding dead-end 404s.
 
-These updates resolved the authentication loop and ensured that users landing on protected routes post-login experience a seamless, validated transition — with reliable session persistence across refreshes and network delays.
+
+#### ⚠️ Expired Database in Production
+
+During a break in development to focus on exams, the hosted PostgreSQL database on Render expired due to inactivity. As a result, all API requests to the production server began failing silently, returning internal server errors without clear messaging.
+
+Diagnosing the issue wasn't straightforward — I had missed Render’s expiration notification email, and since development had paused, the root cause wasn’t immediately fresh in mind. When I resumed work and noticed repeated failures, I initially reverted the backend to use a local SQLite database on `127.0.0.1` to isolate and test the API logic.
+
+Upon inspecting Render’s server logs more thoroughly, I discovered that the PostgreSQL instance had indeed expired and was no longer available for connections.
+
+#### 🛠️ Fixes Implemented
+
+1. **Isolated API Failures Locally**
+   Reconfigured the backend to run locally using SQLite, which confirmed that the issue was specific to the production database, not the app logic.
+
+2. **Log Inspection on Render**
+   Accessed Render’s service logs and noticed connection errors tied to the missing PostgreSQL service.
+
+3. **Provisioned a New Database**
+   Created a new managed PostgreSQL instance via Render, updated environment variables (`DATABASE_URL`), and redeployed the backend.
+
+4. **Restored Production Setup**
+   Switched back to PostgreSQL, pointed the API to the correct deployment URL, and confirmed successful reconnection with persistence and migration checks.
+
 
 
 ## Contributing
