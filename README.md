@@ -30,6 +30,7 @@
 * [License](#license)
 
 ## Project Overview
+![API Documentation](https://ik.imagekit.io/mshcgnjju/Swagger%20API%20Documentation.png)
 
 KitoDeck Backend is a secure, high-performance API service built with Django REST Framework that powers content moderation and user management for the KitoDeck platform. Designed with scalability in mind, it provides:
 
@@ -126,15 +127,15 @@ Key environment variables:
 DEBUG=False  # Always False in production
 SECRET_KEY=your-secret-key-here
 DATABASE_URL=postgres://user:password@localhost:5432/kitodeck
-ALLOWED_HOSTS=127.0.0.1,localhost
+EMAIL_BACKEND=django.core.mail.backends...
 ```
 
 ## API Documentation
 
 Explore our interactive API docs:
 
-* [Swagger UI](/api/schema/swagger-ui/)
-* [ReDoc](/api/schema/redoc/)
+* [Swagger UI](https://kitodeck-be-5cal.onrender.com/api/schema/swagger-ui/)
+* [ReDoc](https://kitodeck-be-5cal.onrender.com/api/schema/redoc/)
 
 Sample request:
 
@@ -209,6 +210,7 @@ Example response:
 | POST /auth/login/  | 120ms        | 250ms     | 1500 RPM   |
 | GET /user/details/ | 80ms         | 150ms     | 2000 RPM   |
 | POST /image-scan/  | 900ms        | 1.5s      | 800 RPM    |
+| POST /chat-scan/   | 600ms        | 1.3s      | 580 RPM    |
 
 Optimization techniques:
 
